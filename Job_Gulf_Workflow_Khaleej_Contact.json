@@ -1,0 +1,1774 @@
+{
+  "name": "Job Gulf Workflow Khaleej Contact",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "custom",
+              "cronExpression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "2e682bef-acf4-4390-9605-7c8932a9d9b6",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        680,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://jsearch.p.rapidapi.com/search?query=hotel OR restaurant OR mall jobs&country={{ $json.country }}&page=1&num_pages=1&language=en",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "{\n  \"X-RapidAPI-Key\": \"a8d7ca5de1msh0bad91c937e57eep18746ajsn5851688d494d\",\n  \"X-RapidAPI-Host\": \"jsearch.p.rapidapi.com\"\n}"
+      },
+      "id": "f9656b97-e318-4572-b84b-15f0059fdd2c",
+      "name": "Fetch Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        940,
+        140
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "return items;"
+      },
+      "id": "947d93ec-a4f3-4917-9639-ab38b91b46cf",
+      "name": "Normalize Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "i3d.technologie@gmail.com",
+        "toEmail": "i3d.technologie@gmail.com",
+        "subject": "Daily Job Offers (Automatic Notification)",
+        "text": "Hello,\\n\\nPlease find below today’s collected job offers (grouped by country):\\n\\n{{$json[\"body\"]}}\\n\\n— This is an automatic email sent by n8n",
+        "options": {}
+      },
+      "id": "e61ef2ee-ab29-4368-a477-47fc8d5e483a",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        2800,
+        180
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "8av4eKI0BNjTW95Y",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.flatMap(item => {\n  return item.json.data.map(job => {\n    return {\n      json: {\n        Country: item.json.parameters.country.toUpperCase() || \"Non renseigné\",\n        Employer_Name: job.employer_name || \"Non renseigné\",\n        Establishment_Type: job.job_publisher || \"Non renseigné\",\n        Star_Rating: \"Non renseigné\",\n        Total_Positions: \"Non renseigné\",\n        Job_Positions: job.job_title || \"Non renseigné\",\n        Conditions: \"Non renseigné\",\n        Job_Location: job.job_location || \"Non renseigné\",\n        Publish_Date: job.job_posted_at_datetime_utc || \"Non renseigné\",\n        link_to_apply: job.job_google_link || job.job_apply_link || job.apply_options?.[0]?.apply_link || \"Non trouvé\",\n        Employer_Website: job.employer_website || \"Non renseigné\",\n        Email_Contact: job.job_contact?.email || \"Non trouvé\",\n        Other_Contact_Details: job.job_contact?.phone || \"Non trouvé\"\n      }\n    };\n  });\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        140
+      ],
+      "id": "81cd6ce3-e2a3-4b9f-bc9d-8c710920193a",
+      "name": "Extract Jobs"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        140
+      ],
+      "id": "bd71ef4c-f31c-4ef6-94b2-ee6bf73c0769",
+      "name": "Wait",
+      "webhookId": "4acdcbdf-a9fe-41f5-ad31-02f3fb844e01"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      \"Country\": item.json.Country,\n      \"Employer_Name\": item.json.Employer_Name,\n      \"Establishment_Type\": item.json.Establishment_Type,\n      \"Job_Positions\": item.json.Job_Positions,\n      \"Job_Location\": item.json.Job_Location,\n      \"Employer_Website\": item.json.Employer_Website,\n      \"link_to_apply\": item.json.link_to_apply\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        140
+      ],
+      "id": "2d38e963-b00f-4f96-b98a-4d3f9969adcc",
+      "name": "Format JSON GPT"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu es un assistant intelligent. Tu enrichis les offres d’emploi issues de sites intermédiaires avec des données fiables et structurées.\n\n🎯 Objectif :\n- Identifier le **véritable établissement recruteur** (pas les plateformes comme Bayt, Naukrigulf, etc.)\n- Déterminer son **type** : \"Restaurant\", \"Hôtel\", \"Centre commercial\" ou \"Autre\"\n- Rechercher ses **coordonnées fiables** (site, email, téléphone, WhatsApp…)\n- Si un champ est introuvable, renvoie \"Non trouvé\"\n- Garde les champs d’origine utiles comme \"Country\", \"Source\", etc.\n\n🧾 Format de sortie obligatoire : un **objet JSON plat** (pas de tableau, pas de `results[]`, pas de texte autour). Exemple :\n\n{\n  \"Country\": \"AE\",\n  \"Source\": \"Bayt.com\",\n  \"Employer_Name\": \"Al Futtaim Careers\",\n  \"True_Employer_Name\": \"Al Futtaim Group\",\n  \"Establishment_Type\": \"Centre commercial\",\n  \"Job_Positions\": \"Cashier\",\n  \"Job_Location\": \"Dubai\",\n  \"Publish_Date\": \"2025-06-17\",\n  \"link_to_apply\": \"https://www.bayt.com/en/job/cashier-uae-123456/\",\n  \"Employer_Website\": \"https://www.alfuttaim.com\",\n  \"Email_Contact\": \"careers@alfuttaim.com\",\n  \"Other_Contact_Details\": \"+971 4 222 8888\",\n  \"Remarques\": \"Entreprise connue dans la distribution à Dubaï\"\n}\n\nVoici les données à enrichir :\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2020,
+        140
+      ],
+      "id": "143c7896-2956-47f1-9850-c04df8292607",
+      "name": "OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "6yL66gbuSdjqYZ7X",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "215367e7-8513-80b5-89fc-d76e1301c2b7",
+          "mode": "list",
+          "cachedResultName": "Job Opportunities Khaleej Contact",
+          "cachedResultUrl": "https://www.notion.so/215367e7851380b589fcd76e1301c2b7"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Country|title",
+              "title": "={{ $json.message.content.Country || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Employer Name|rich_text",
+              "textContent": "={{ $json.message.content.Employer_Name || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Source|rich_text",
+              "textContent": "={{ $json.message.content.Source || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Establishment Type|select",
+              "selectValue": "={{ $json.message.content.Establishment_Type || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Positions|rich_text",
+              "textContent": "={{ $json.message.content.Job_Positions || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Location|rich_text",
+              "textContent": "={{ $json.message.content.Job_Location || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Publish Date|date",
+              "date": "={{ $json.message.content.Publish_Date !== \"Non trouvé\" ? $json.message.content.Publish_Date : undefined }}"
+            },
+            {
+              "key": "link to apply\t|url",
+              "urlValue": "={{ $json.message.content.link_to_apply || \"https://example.com\" }}"
+            },
+            {
+              "key": "Employer Website|url",
+              "urlValue": "={{ $json.message.content.Employer_Website || \"https://example.com\" }}"
+            },
+            {
+              "key": "Email Contact|email",
+              "emailValue": "={{ $json.message.content.Email_Contact || \"non@renseigne.com\" }}"
+            },
+            {
+              "key": "Other Contact Details|rich_text",
+              "textContent": "={{ $json.message.content.Other_Contact_Details || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Remarques|rich_text",
+              "textContent": "={{ $json.message.content.Remarques || \"Aucune remarque\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        140
+      ],
+      "id": "72d66975-b0ac-479f-a7c2-8d0dc2fa9f5c",
+      "name": "Notion_Resultats",
+      "credentials": {
+        "notionApi": {
+          "id": "LQ7LitPQzTBL0SL9",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://jsearch.p.rapidapi.com/search?query=hotel OR restaurant OR mall jobs&country={{ $json.country }}&page=1&num_pages=1&language=en",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "{\n  \"X-RapidAPI-Key\": \"a8d7ca5de1msh0bad91c937e57eep18746ajsn5851688d494d\",\n  \"X-RapidAPI-Host\": \"jsearch.p.rapidapi.com\"\n}"
+      },
+      "id": "63e93b6c-ff0e-4949-867e-341bb1a2dbcc",
+      "name": "Fetch Jobs2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        940,
+        360
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "return items;"
+      },
+      "id": "0d8dddd7-d40c-47d2-896b-40e9f1b1312e",
+      "name": "Normalize Results2",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.flatMap(item => {\n  return item.json.data.map(job => {\n    return {\n      json: {\n        Country: item.json.parameters.country.toUpperCase() || \"Non renseigné\",\n        Employer_Name: job.employer_name || \"Non renseigné\",\n        Establishment_Type: job.job_publisher || \"Non renseigné\",\n        Star_Rating: \"Non renseigné\",\n        Total_Positions: \"Non renseigné\",\n        Job_Positions: job.job_title || \"Non renseigné\",\n        Conditions: \"Non renseigné\",\n        Job_Location: job.job_location || \"Non renseigné\",\n        Publish_Date: job.job_posted_at_datetime_utc || \"Non renseigné\",\n        link_to_apply: job.job_google_link || job.job_apply_link || job.apply_options?.[0]?.apply_link || \"Non trouvé\",\n        Employer_Website: job.employer_website || \"Non renseigné\",\n        Email_Contact: job.job_contact?.email || \"Non trouvé\",\n        Other_Contact_Details: job.job_contact?.phone || \"Non trouvé\"\n      }\n    };\n  });\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        360
+      ],
+      "id": "f113cc64-dfc8-4793-86ab-19a05aeafd1b",
+      "name": "Extract Jobs1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        360
+      ],
+      "id": "139925f7-b3ae-4d5d-bd42-bfe36fdcfaa9",
+      "name": "Wait1",
+      "webhookId": "4acdcbdf-a9fe-41f5-ad31-02f3fb844e01"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      \"Country\": item.json.Country,\n      \"Employer_Name\": item.json.Employer_Name,\n      \"Establishment_Type\": item.json.Establishment_Type,\n      \"Job_Positions\": item.json.Job_Positions,\n      \"Job_Location\": item.json.Job_Location,\n      \"Employer_Website\": item.json.Employer_Website,\n      \"link_to_apply\": item.json.link_to_apply\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        360
+      ],
+      "id": "fa486572-c560-4061-8b64-83e72a1c557e",
+      "name": "Format JSON GPT1"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu es un assistant intelligent. Tu enrichis les offres d’emploi issues de sites intermédiaires avec des données fiables et structurées.\n\n🎯 Objectif :\n- Identifier le **véritable établissement recruteur** (pas les plateformes comme Bayt, Naukrigulf, etc.)\n- Déterminer son **type** : \"Restaurant\", \"Hôtel\", \"Centre commercial\" ou \"Autre\"\n- Rechercher ses **coordonnées fiables** (site, email, téléphone, WhatsApp…)\n- Si un champ est introuvable, renvoie \"Non trouvé\"\n- Garde les champs d’origine utiles comme \"Country\", \"Source\", etc.\n\n🧾 Format de sortie obligatoire : un **objet JSON plat** (pas de tableau, pas de `results[]`, pas de texte autour). Exemple :\n\n{\n  \"Country\": \"AE\",\n  \"Source\": \"Bayt.com\",\n  \"Employer_Name\": \"Al Futtaim Careers\",\n  \"True_Employer_Name\": \"Al Futtaim Group\",\n  \"Establishment_Type\": \"Centre commercial\",\n  \"Job_Positions\": \"Cashier\",\n  \"Job_Location\": \"Dubai\",\n  \"Publish_Date\": \"2025-06-17\",\n  \"link_to_apply\": \"https://www.bayt.com/en/job/cashier-uae-123456/\",\n  \"Employer_Website\": \"https://www.alfuttaim.com\",\n  \"Email_Contact\": \"careers@alfuttaim.com\",\n  \"Other_Contact_Details\": \"+971 4 222 8888\",\n  \"Remarques\": \"Entreprise connue dans la distribution à Dubaï\"\n}\n\nVoici les données à enrichir :\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2020,
+        360
+      ],
+      "id": "8972d163-09d1-4434-b92f-66850cc211f4",
+      "name": "OpenAI2",
+      "credentials": {
+        "openAiApi": {
+          "id": "6yL66gbuSdjqYZ7X",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "215367e7-8513-80b5-89fc-d76e1301c2b7",
+          "mode": "list",
+          "cachedResultName": "Job Opportunities Khaleej Contact",
+          "cachedResultUrl": "https://www.notion.so/215367e7851380b589fcd76e1301c2b7"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Country|title",
+              "title": "={{ $json.message.content.Country || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Employer Name|rich_text",
+              "textContent": "={{ $json.message.content.Employer_Name || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Source|rich_text",
+              "textContent": "={{ $json.message.content.Source || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Establishment Type|select",
+              "selectValue": "={{ $json.message.content.Establishment_Type || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Positions|rich_text",
+              "textContent": "={{ $json.message.content.Job_Positions || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Location|rich_text",
+              "textContent": "={{ $json.message.content.Job_Location || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Publish Date|date",
+              "date": "={{ $json.message.content.Publish_Date !== \"Non trouvé\" ? $json.message.content.Publish_Date : undefined }}"
+            },
+            {
+              "key": "link to apply\t|url",
+              "urlValue": "={{ $json.message.content.link_to_apply || \"https://example.com\" }}"
+            },
+            {
+              "key": "Employer Website|url",
+              "urlValue": "={{ $json.message.content.Employer_Website || \"https://example.com\" }}"
+            },
+            {
+              "key": "Email Contact|email",
+              "emailValue": "={{ $json.message.content.Email_Contact || \"non@renseigne.com\" }}"
+            },
+            {
+              "key": "Other Contact Details|rich_text",
+              "textContent": "={{ $json.message.content.Other_Contact_Details || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Remarques|rich_text",
+              "textContent": "={{ $json.message.content.Remarques || \"Aucune remarque\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        360
+      ],
+      "id": "4fddd698-9b2f-40e9-b2a2-4e291dff3bb4",
+      "name": "Notion_Resultats1",
+      "credentials": {
+        "notionApi": {
+          "id": "LQ7LitPQzTBL0SL9",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [\n  { json: { country: 'AE' } }\n];\n"
+      },
+      "id": "ad7d9b99-87a6-4f83-9f07-d065af345ace",
+      "name": "Set Countries AE",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://jsearch.p.rapidapi.com/search?query=hotel OR restaurant OR mall jobs&country={{ $json.country }}&page=1&num_pages=1&language=en",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "{\n  \"X-RapidAPI-Key\": \"a8d7ca5de1msh0bad91c937e57eep18746ajsn5851688d494d\",\n  \"X-RapidAPI-Host\": \"jsearch.p.rapidapi.com\"\n}"
+      },
+      "id": "5a67699d-0c9e-4b63-baf6-7098097b5353",
+      "name": "Fetch Jobs3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        940,
+        600
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "return items;"
+      },
+      "id": "b17b6376-fd2b-4e3f-97fe-5a860b074ea1",
+      "name": "Normalize Results3",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.flatMap(item => {\n  return item.json.data.map(job => {\n    return {\n      json: {\n        Country: item.json.parameters.country.toUpperCase() || \"Non renseigné\",\n        Employer_Name: job.employer_name || \"Non renseigné\",\n        Establishment_Type: job.job_publisher || \"Non renseigné\",\n        Star_Rating: \"Non renseigné\",\n        Total_Positions: \"Non renseigné\",\n        Job_Positions: job.job_title || \"Non renseigné\",\n        Conditions: \"Non renseigné\",\n        Job_Location: job.job_location || \"Non renseigné\",\n        Publish_Date: job.job_posted_at_datetime_utc || \"Non renseigné\",\n        link_to_apply: job.job_google_link || job.job_apply_link || job.apply_options?.[0]?.apply_link || \"Non trouvé\",\n        Employer_Website: job.employer_website || \"Non renseigné\",\n        Email_Contact: job.job_contact?.email || \"Non trouvé\",\n        Other_Contact_Details: job.job_contact?.phone || \"Non trouvé\"\n      }\n    };\n  });\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        600
+      ],
+      "id": "cfad4602-17f8-4bce-88f7-a3730a89d13b",
+      "name": "Extract Jobs2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        600
+      ],
+      "id": "83475636-7d25-4700-8953-38c9d207bb87",
+      "name": "Wait2",
+      "webhookId": "4acdcbdf-a9fe-41f5-ad31-02f3fb844e01"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      \"Country\": item.json.Country,\n      \"Employer_Name\": item.json.Employer_Name,\n      \"Establishment_Type\": item.json.Establishment_Type,\n      \"Job_Positions\": item.json.Job_Positions,\n      \"Job_Location\": item.json.Job_Location,\n      \"Employer_Website\": item.json.Employer_Website,\n      \"link_to_apply\": item.json.link_to_apply\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        600
+      ],
+      "id": "63c2dcc2-c2e5-4f39-821f-b2fd2429b841",
+      "name": "Format JSON GPT2"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu es un assistant intelligent. Tu enrichis les offres d’emploi issues de sites intermédiaires avec des données fiables et structurées.\n\n🎯 Objectif :\n- Identifier le **véritable établissement recruteur** (pas les plateformes comme Bayt, Naukrigulf, etc.)\n- Déterminer son **type** : \"Restaurant\", \"Hôtel\", \"Centre commercial\" ou \"Autre\"\n- Rechercher ses **coordonnées fiables** (site, email, téléphone, WhatsApp…)\n- Si un champ est introuvable, renvoie \"Non trouvé\"\n- Garde les champs d’origine utiles comme \"Country\", \"Source\", etc.\n\n🧾 Format de sortie obligatoire : un **objet JSON plat** (pas de tableau, pas de `results[]`, pas de texte autour). Exemple :\n\n{\n  \"Country\": \"AE\",\n  \"Source\": \"Bayt.com\",\n  \"Employer_Name\": \"Al Futtaim Careers\",\n  \"True_Employer_Name\": \"Al Futtaim Group\",\n  \"Establishment_Type\": \"Centre commercial\",\n  \"Job_Positions\": \"Cashier\",\n  \"Job_Location\": \"Dubai\",\n  \"Publish_Date\": \"2025-06-17\",\n  \"link_to_apply\": \"https://www.bayt.com/en/job/cashier-uae-123456/\",\n  \"Employer_Website\": \"https://www.alfuttaim.com\",\n  \"Email_Contact\": \"careers@alfuttaim.com\",\n  \"Other_Contact_Details\": \"+971 4 222 8888\",\n  \"Remarques\": \"Entreprise connue dans la distribution à Dubaï\"\n}\n\nVoici les données à enrichir :\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2020,
+        600
+      ],
+      "id": "a801a18d-579d-40dd-8134-efbf68c15958",
+      "name": "OpenAI3",
+      "credentials": {
+        "openAiApi": {
+          "id": "6yL66gbuSdjqYZ7X",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "215367e7-8513-80b5-89fc-d76e1301c2b7",
+          "mode": "list",
+          "cachedResultName": "Job Opportunities Khaleej Contact",
+          "cachedResultUrl": "https://www.notion.so/215367e7851380b589fcd76e1301c2b7"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Country|title",
+              "title": "={{ $json.message.content.Country || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Employer Name|rich_text",
+              "textContent": "={{ $json.message.content.Employer_Name || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Source|rich_text",
+              "textContent": "={{ $json.message.content.Source || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Establishment Type|select",
+              "selectValue": "={{ $json.message.content.Establishment_Type || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Positions|rich_text",
+              "textContent": "={{ $json.message.content.Job_Positions || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Location|rich_text",
+              "textContent": "={{ $json.message.content.Job_Location || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Publish Date|date",
+              "date": "={{ $json.message.content.Publish_Date !== \"Non trouvé\" ? $json.message.content.Publish_Date : undefined }}"
+            },
+            {
+              "key": "link to apply\t|url",
+              "urlValue": "={{ $json.message.content.link_to_apply || \"https://example.com\" }}"
+            },
+            {
+              "key": "Employer Website|url",
+              "urlValue": "={{ $json.message.content.Employer_Website || \"https://example.com\" }}"
+            },
+            {
+              "key": "Email Contact|email",
+              "emailValue": "={{ $json.message.content.Email_Contact || \"non@renseigne.com\" }}"
+            },
+            {
+              "key": "Other Contact Details|rich_text",
+              "textContent": "={{ $json.message.content.Other_Contact_Details || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Remarques|rich_text",
+              "textContent": "={{ $json.message.content.Remarques || \"Aucune remarque\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        600
+      ],
+      "id": "1b102be5-3931-4ca4-954a-0dc8c78b4e90",
+      "name": "Notion_Resultats2",
+      "credentials": {
+        "notionApi": {
+          "id": "LQ7LitPQzTBL0SL9",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [\n  { json: { country: 'SA' } }\n];\n"
+      },
+      "id": "6c42b818-c655-4500-b2ea-3e0fecc6f03c",
+      "name": "Set Countries SA",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [\n  { json: { country: 'QA' } }\n];\n"
+      },
+      "id": "10a34bd2-eee6-4ee9-86f9-9c9b317d1b4f",
+      "name": "Set Countries QA",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://jsearch.p.rapidapi.com/search?query=hotel OR restaurant OR mall jobs&country={{ $json.country }}&page=1&num_pages=1&language=en",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "{\n  \"X-RapidAPI-Key\": \"a8d7ca5de1msh0bad91c937e57eep18746ajsn5851688d494d\",\n  \"X-RapidAPI-Host\": \"jsearch.p.rapidapi.com\"\n}"
+      },
+      "id": "4d06ee78-6ef6-42a5-aeb3-0457916f1881",
+      "name": "Fetch Jobs4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        940,
+        820
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "return items;"
+      },
+      "id": "a52f3a20-a746-49a3-a699-b2f0a995e4ef",
+      "name": "Normalize Results4",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        820
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.flatMap(item => {\n  return item.json.data.map(job => {\n    return {\n      json: {\n        Country: item.json.parameters.country.toUpperCase() || \"Non renseigné\",\n        Employer_Name: job.employer_name || \"Non renseigné\",\n        Establishment_Type: job.job_publisher || \"Non renseigné\",\n        Star_Rating: \"Non renseigné\",\n        Total_Positions: \"Non renseigné\",\n        Job_Positions: job.job_title || \"Non renseigné\",\n        Conditions: \"Non renseigné\",\n        Job_Location: job.job_location || \"Non renseigné\",\n        Publish_Date: job.job_posted_at_datetime_utc || \"Non renseigné\",\n        link_to_apply: job.job_google_link || job.job_apply_link || job.apply_options?.[0]?.apply_link || \"Non trouvé\",\n        Employer_Website: job.employer_website || \"Non renseigné\",\n        Email_Contact: job.job_contact?.email || \"Non trouvé\",\n        Other_Contact_Details: job.job_contact?.phone || \"Non trouvé\"\n      }\n    };\n  });\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        820
+      ],
+      "id": "c002d490-12f0-492b-982a-353c7a25f060",
+      "name": "Extract Jobs3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        820
+      ],
+      "id": "3129f9eb-f272-40ad-bafc-267d814bdc0e",
+      "name": "Wait3",
+      "webhookId": "4acdcbdf-a9fe-41f5-ad31-02f3fb844e01"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      \"Country\": item.json.Country,\n      \"Employer_Name\": item.json.Employer_Name,\n      \"Establishment_Type\": item.json.Establishment_Type,\n      \"Job_Positions\": item.json.Job_Positions,\n      \"Job_Location\": item.json.Job_Location,\n      \"Employer_Website\": item.json.Employer_Website,\n      \"link_to_apply\": item.json.link_to_apply\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        820
+      ],
+      "id": "1634df13-22f5-4c4e-8894-7ded683444c1",
+      "name": "Format JSON GPT3"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu es un assistant intelligent. Tu enrichis les offres d’emploi issues de sites intermédiaires avec des données fiables et structurées.\n\n🎯 Objectif :\n- Identifier le **véritable établissement recruteur** (pas les plateformes comme Bayt, Naukrigulf, etc.)\n- Déterminer son **type** : \"Restaurant\", \"Hôtel\", \"Centre commercial\" ou \"Autre\"\n- Rechercher ses **coordonnées fiables** (site, email, téléphone, WhatsApp…)\n- Si un champ est introuvable, renvoie \"Non trouvé\"\n- Garde les champs d’origine utiles comme \"Country\", \"Source\", etc.\n\n🧾 Format de sortie obligatoire : un **objet JSON plat** (pas de tableau, pas de `results[]`, pas de texte autour). Exemple :\n\n{\n  \"Country\": \"AE\",\n  \"Source\": \"Bayt.com\",\n  \"Employer_Name\": \"Al Futtaim Careers\",\n  \"True_Employer_Name\": \"Al Futtaim Group\",\n  \"Establishment_Type\": \"Centre commercial\",\n  \"Job_Positions\": \"Cashier\",\n  \"Job_Location\": \"Dubai\",\n  \"Publish_Date\": \"2025-06-17\",\n  \"link_to_apply\": \"https://www.bayt.com/en/job/cashier-uae-123456/\",\n  \"Employer_Website\": \"https://www.alfuttaim.com\",\n  \"Email_Contact\": \"careers@alfuttaim.com\",\n  \"Other_Contact_Details\": \"+971 4 222 8888\",\n  \"Remarques\": \"Entreprise connue dans la distribution à Dubaï\"\n}\n\nVoici les données à enrichir :\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2020,
+        820
+      ],
+      "id": "4323d076-9f58-4b53-bee3-aa8421c3414b",
+      "name": "OpenAI4",
+      "credentials": {
+        "openAiApi": {
+          "id": "6yL66gbuSdjqYZ7X",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "215367e7-8513-80b5-89fc-d76e1301c2b7",
+          "mode": "list",
+          "cachedResultName": "Job Opportunities Khaleej Contact",
+          "cachedResultUrl": "https://www.notion.so/215367e7851380b589fcd76e1301c2b7"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Country|title",
+              "title": "={{ $json.message.content.Country || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Employer Name|rich_text",
+              "textContent": "={{ $json.message.content.Employer_Name || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Source|rich_text",
+              "textContent": "={{ $json.message.content.Source || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Establishment Type|select",
+              "selectValue": "={{ $json.message.content.Establishment_Type || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Positions|rich_text",
+              "textContent": "={{ $json.message.content.Job_Positions || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Location|rich_text",
+              "textContent": "={{ $json.message.content.Job_Location || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Publish Date|date",
+              "date": "={{ $json.message.content.Publish_Date !== \"Non trouvé\" ? $json.message.content.Publish_Date : undefined }}"
+            },
+            {
+              "key": "link to apply\t|url",
+              "urlValue": "={{ $json.message.content.link_to_apply || \"https://example.com\" }}"
+            },
+            {
+              "key": "Employer Website|url",
+              "urlValue": "={{ $json.message.content.Employer_Website || \"https://example.com\" }}"
+            },
+            {
+              "key": "Email Contact|email",
+              "emailValue": "={{ $json.message.content.Email_Contact || \"non@renseigne.com\" }}"
+            },
+            {
+              "key": "Other Contact Details|rich_text",
+              "textContent": "={{ $json.message.content.Other_Contact_Details || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Remarques|rich_text",
+              "textContent": "={{ $json.message.content.Remarques || \"Aucune remarque\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        820
+      ],
+      "id": "59856c60-0312-4be7-8a4c-4ca79bf178e0",
+      "name": "Notion_Resultats3",
+      "credentials": {
+        "notionApi": {
+          "id": "LQ7LitPQzTBL0SL9",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [\n  { json: { country: 'KW' } }\n];\n"
+      },
+      "id": "1ff4da63-64e6-4b8c-8b35-2548f9c40c98",
+      "name": "Set Countries KW",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        820
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://jsearch.p.rapidapi.com/search?query=hotel OR restaurant OR mall jobs&country={{ $json.country }}&page=1&num_pages=1&language=en",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "{\n  \"X-RapidAPI-Key\": \"a8d7ca5de1msh0bad91c937e57eep18746ajsn5851688d494d\",\n  \"X-RapidAPI-Host\": \"jsearch.p.rapidapi.com\"\n}"
+      },
+      "id": "4e2355fa-f104-4154-bfde-f80ded7ba3f4",
+      "name": "Fetch Jobs5",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        940,
+        1020
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "return items;"
+      },
+      "id": "3cc23763-ae4d-426b-895b-b560a4cfdf1e",
+      "name": "Normalize Results5",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        1020
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.flatMap(item => {\n  return item.json.data.map(job => {\n    return {\n      json: {\n        Country: item.json.parameters.country.toUpperCase() || \"Non renseigné\",\n        Employer_Name: job.employer_name || \"Non renseigné\",\n        Establishment_Type: job.job_publisher || \"Non renseigné\",\n        Star_Rating: \"Non renseigné\",\n        Total_Positions: \"Non renseigné\",\n        Job_Positions: job.job_title || \"Non renseigné\",\n        Conditions: \"Non renseigné\",\n        Job_Location: job.job_location || \"Non renseigné\",\n        Publish_Date: job.job_posted_at_datetime_utc || \"Non renseigné\",\n        link_to_apply: job.job_google_link || job.job_apply_link || job.apply_options?.[0]?.apply_link || \"Non trouvé\",\n        Employer_Website: job.employer_website || \"Non renseigné\",\n        Email_Contact: job.job_contact?.email || \"Non trouvé\",\n        Other_Contact_Details: job.job_contact?.phone || \"Non trouvé\"\n      }\n    };\n  });\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        1020
+      ],
+      "id": "01df4f84-9144-43bb-8e75-e12ae8b976bc",
+      "name": "Extract Jobs4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        1020
+      ],
+      "id": "deb41d7c-0800-48c5-a203-0e4bb6d20085",
+      "name": "Wait4",
+      "webhookId": "4acdcbdf-a9fe-41f5-ad31-02f3fb844e01"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      \"Country\": item.json.Country,\n      \"Employer_Name\": item.json.Employer_Name,\n      \"Establishment_Type\": item.json.Establishment_Type,\n      \"Job_Positions\": item.json.Job_Positions,\n      \"Job_Location\": item.json.Job_Location,\n      \"Employer_Website\": item.json.Employer_Website,\n      \"link_to_apply\": item.json.link_to_apply\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        1020
+      ],
+      "id": "b0dfb0d2-7d01-4b1e-be6e-8cde9f4435ae",
+      "name": "Format JSON GPT4"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu es un assistant intelligent. Tu enrichis les offres d’emploi issues de sites intermédiaires avec des données fiables et structurées.\n\n🎯 Objectif :\n- Identifier le **véritable établissement recruteur** (pas les plateformes comme Bayt, Naukrigulf, etc.)\n- Déterminer son **type** : \"Restaurant\", \"Hôtel\", \"Centre commercial\" ou \"Autre\"\n- Rechercher ses **coordonnées fiables** (site, email, téléphone, WhatsApp…)\n- Si un champ est introuvable, renvoie \"Non trouvé\"\n- Garde les champs d’origine utiles comme \"Country\", \"Source\", etc.\n\n🧾 Format de sortie obligatoire : un **objet JSON plat** (pas de tableau, pas de `results[]`, pas de texte autour). Exemple :\n\n{\n  \"Country\": \"AE\",\n  \"Source\": \"Bayt.com\",\n  \"Employer_Name\": \"Al Futtaim Careers\",\n  \"True_Employer_Name\": \"Al Futtaim Group\",\n  \"Establishment_Type\": \"Centre commercial\",\n  \"Job_Positions\": \"Cashier\",\n  \"Job_Location\": \"Dubai\",\n  \"Publish_Date\": \"2025-06-17\",\n  \"link_to_apply\": \"https://www.bayt.com/en/job/cashier-uae-123456/\",\n  \"Employer_Website\": \"https://www.alfuttaim.com\",\n  \"Email_Contact\": \"careers@alfuttaim.com\",\n  \"Other_Contact_Details\": \"+971 4 222 8888\",\n  \"Remarques\": \"Entreprise connue dans la distribution à Dubaï\"\n}\n\nVoici les données à enrichir :\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2020,
+        1020
+      ],
+      "id": "100450f7-65c9-4f6c-8b7f-d8a5e40f9f15",
+      "name": "OpenAI5",
+      "credentials": {
+        "openAiApi": {
+          "id": "6yL66gbuSdjqYZ7X",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "215367e7-8513-80b5-89fc-d76e1301c2b7",
+          "mode": "list",
+          "cachedResultName": "Job Opportunities Khaleej Contact",
+          "cachedResultUrl": "https://www.notion.so/215367e7851380b589fcd76e1301c2b7"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Country|title",
+              "title": "={{ $json.message.content.Country || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Employer Name|rich_text",
+              "textContent": "={{ $json.message.content.Employer_Name || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Source|rich_text",
+              "textContent": "={{ $json.message.content.Source || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Establishment Type|select",
+              "selectValue": "={{ $json.message.content.Establishment_Type || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Positions|rich_text",
+              "textContent": "={{ $json.message.content.Job_Positions || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Location|rich_text",
+              "textContent": "={{ $json.message.content.Job_Location || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Publish Date|date",
+              "date": "={{ $json.message.content.Publish_Date !== \"Non trouvé\" ? $json.message.content.Publish_Date : undefined }}"
+            },
+            {
+              "key": "link to apply\t|url",
+              "urlValue": "={{ $json.message.content.link_to_apply || \"https://example.com\" }}"
+            },
+            {
+              "key": "Employer Website|url",
+              "urlValue": "={{ $json.message.content.Employer_Website || \"https://example.com\" }}"
+            },
+            {
+              "key": "Email Contact|email",
+              "emailValue": "={{ $json.message.content.Email_Contact || \"non@renseigne.com\" }}"
+            },
+            {
+              "key": "Other Contact Details|rich_text",
+              "textContent": "={{ $json.message.content.Other_Contact_Details || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Remarques|rich_text",
+              "textContent": "={{ $json.message.content.Remarques || \"Aucune remarque\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        1020
+      ],
+      "id": "8c3d7ecc-5ed3-4724-ae47-c01363a4fb2f",
+      "name": "Notion_Resultats4",
+      "credentials": {
+        "notionApi": {
+          "id": "LQ7LitPQzTBL0SL9",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [\n  { json: { country: 'BH' } }\n];\n"
+      },
+      "id": "d6eb1b25-041c-49c7-a415-8a04978c4cb6",
+      "name": "Set Countries BH",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        1020
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://jsearch.p.rapidapi.com/search?query=hotel OR restaurant OR mall jobs&country={{ $json.country }}&page=1&num_pages=1&language=en",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "{\n  \"X-RapidAPI-Key\": \"a8d7ca5de1msh0bad91c937e57eep18746ajsn5851688d494d\",\n  \"X-RapidAPI-Host\": \"jsearch.p.rapidapi.com\"\n}"
+      },
+      "id": "554f7e36-86fe-4ecb-ab0d-d59409ebde45",
+      "name": "Fetch Jobs6",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        940,
+        1220
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "return items;"
+      },
+      "id": "cfeb1bac-f0da-4c5a-bc0f-a9876e612d18",
+      "name": "Normalize Results6",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        1220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.flatMap(item => {\n  return item.json.data.map(job => {\n    return {\n      json: {\n        Country: item.json.parameters.country.toUpperCase() || \"Non renseigné\",\n        Employer_Name: job.employer_name || \"Non renseigné\",\n        Establishment_Type: job.job_publisher || \"Non renseigné\",\n        Star_Rating: \"Non renseigné\",\n        Total_Positions: \"Non renseigné\",\n        Job_Positions: job.job_title || \"Non renseigné\",\n        Conditions: \"Non renseigné\",\n        Job_Location: job.job_location || \"Non renseigné\",\n        Publish_Date: job.job_posted_at_datetime_utc || \"Non renseigné\",\n        link_to_apply: job.job_google_link || job.job_apply_link || job.apply_options?.[0]?.apply_link || \"Non trouvé\",\n        Employer_Website: job.employer_website || \"Non renseigné\",\n        Email_Contact: job.job_contact?.email || \"Non trouvé\",\n        Other_Contact_Details: job.job_contact?.phone || \"Non trouvé\"\n      }\n    };\n  });\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        1220
+      ],
+      "id": "e3f97c6d-3d31-48da-9272-661c0412df41",
+      "name": "Extract Jobs5"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        1220
+      ],
+      "id": "c91bc8b8-82aa-405b-a272-823ea985694f",
+      "name": "Wait5",
+      "webhookId": "4acdcbdf-a9fe-41f5-ad31-02f3fb844e01"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      \"Country\": item.json.Country,\n      \"Employer_Name\": item.json.Employer_Name,\n      \"Establishment_Type\": item.json.Establishment_Type,\n      \"Job_Positions\": item.json.Job_Positions,\n      \"Job_Location\": item.json.Job_Location,\n      \"Employer_Website\": item.json.Employer_Website,\n      \"link_to_apply\": item.json.link_to_apply\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        1220
+      ],
+      "id": "86a8a83c-39a0-47a1-86e2-0ee733110913",
+      "name": "Format JSON GPT5"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu es un assistant intelligent. Tu enrichis les offres d’emploi issues de sites intermédiaires avec des données fiables et structurées.\n\n🎯 Objectif :\n- Identifier le **véritable établissement recruteur** (pas les plateformes comme Bayt, Naukrigulf, etc.)\n- Déterminer son **type** : \"Restaurant\", \"Hôtel\", \"Centre commercial\" ou \"Autre\"\n- Rechercher ses **coordonnées fiables** (site, email, téléphone, WhatsApp…)\n- Si un champ est introuvable, renvoie \"Non trouvé\"\n- Garde les champs d’origine utiles comme \"Country\", \"Source\", etc.\n\n🧾 Format de sortie obligatoire : un **objet JSON plat** (pas de tableau, pas de `results[]`, pas de texte autour). Exemple :\n\n{\n  \"Country\": \"AE\",\n  \"Source\": \"Bayt.com\",\n  \"Employer_Name\": \"Al Futtaim Careers\",\n  \"True_Employer_Name\": \"Al Futtaim Group\",\n  \"Establishment_Type\": \"Centre commercial\",\n  \"Job_Positions\": \"Cashier\",\n  \"Job_Location\": \"Dubai\",\n  \"Publish_Date\": \"2025-06-17\",\n  \"link_to_apply\": \"https://www.bayt.com/en/job/cashier-uae-123456/\",\n  \"Employer_Website\": \"https://www.alfuttaim.com\",\n  \"Email_Contact\": \"careers@alfuttaim.com\",\n  \"Other_Contact_Details\": \"+971 4 222 8888\",\n  \"Remarques\": \"Entreprise connue dans la distribution à Dubaï\"\n}\n\nVoici les données à enrichir :\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2020,
+        1220
+      ],
+      "id": "2ae8fae9-e51e-406e-90c6-3e1127767120",
+      "name": "OpenAI6",
+      "credentials": {
+        "openAiApi": {
+          "id": "6yL66gbuSdjqYZ7X",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "215367e7-8513-80b5-89fc-d76e1301c2b7",
+          "mode": "list",
+          "cachedResultName": "Job Opportunities Khaleej Contact",
+          "cachedResultUrl": "https://www.notion.so/215367e7851380b589fcd76e1301c2b7"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Country|title",
+              "title": "={{ $json.message.content.Country || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Employer Name|rich_text",
+              "textContent": "={{ $json.message.content.Employer_Name || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Source|rich_text",
+              "textContent": "={{ $json.message.content.Source || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Establishment Type|select",
+              "selectValue": "={{ $json.message.content.Establishment_Type || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Positions|rich_text",
+              "textContent": "={{ $json.message.content.Job_Positions || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Location|rich_text",
+              "textContent": "={{ $json.message.content.Job_Location || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Publish Date|date",
+              "date": "={{ $json.message.content.Publish_Date !== \"Non trouvé\" ? $json.message.content.Publish_Date : undefined }}"
+            },
+            {
+              "key": "link to apply\t|url",
+              "urlValue": "={{ $json.message.content.link_to_apply || \"https://example.com\" }}"
+            },
+            {
+              "key": "Employer Website|url",
+              "urlValue": "={{ $json.message.content.Employer_Website || \"https://example.com\" }}"
+            },
+            {
+              "key": "Email Contact|email",
+              "emailValue": "={{ $json.message.content.Email_Contact || \"non@renseigne.com\" }}"
+            },
+            {
+              "key": "Other Contact Details|rich_text",
+              "textContent": "={{ $json.message.content.Other_Contact_Details || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Remarques|rich_text",
+              "textContent": "={{ $json.message.content.Remarques || \"Aucune remarque\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        1220
+      ],
+      "id": "3e44b0c8-8468-41d7-aea5-d7178367309f",
+      "name": "Notion_Resultats5",
+      "credentials": {
+        "notionApi": {
+          "id": "LQ7LitPQzTBL0SL9",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [\n  { json: { country: 'OM' } }\n];\n"
+      },
+      "id": "9569f01a-5a9e-4de8-9205-c6bd07ce5d2d",
+      "name": "Set Countries OM",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        680,
+        1220
+      ]
+    },
+    {
+      "parameters": {
+        "path": "ad9a55d6-7cc2-4d43-b94d-8ecad07703ce",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        440,
+        140
+      ],
+      "id": "c633a35e-1da5-419d-aa55-bfc9872637aa",
+      "name": "Webhook 1",
+      "webhookId": "ad9a55d6-7cc2-4d43-b94d-8ecad07703ce"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        []
+      ]
+    },
+    "Fetch Jobs": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Results": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs": {
+      "main": [
+        [
+          {
+            "node": "Normalize Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Format JSON GPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format JSON GPT": {
+      "main": [
+        [
+          {
+            "node": "OpenAI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI1": {
+      "main": [
+        [
+          {
+            "node": "Notion_Resultats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs2": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Results2": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs1": {
+      "main": [
+        [
+          {
+            "node": "Normalize Results2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Format JSON GPT1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format JSON GPT1": {
+      "main": [
+        [
+          {
+            "node": "OpenAI2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI2": {
+      "main": [
+        [
+          {
+            "node": "Notion_Resultats1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Countries AE": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_Resultats": {
+      "main": [
+        [
+          {
+            "node": "Set Countries QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs3": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Results3": {
+      "main": [
+        [
+          {
+            "node": "Wait2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs2": {
+      "main": [
+        [
+          {
+            "node": "Normalize Results3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait2": {
+      "main": [
+        [
+          {
+            "node": "Format JSON GPT2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format JSON GPT2": {
+      "main": [
+        [
+          {
+            "node": "OpenAI3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI3": {
+      "main": [
+        [
+          {
+            "node": "Notion_Resultats2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_Resultats1": {
+      "main": [
+        [
+          {
+            "node": "Set Countries SA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Countries SA": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Countries QA": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs4": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Results4": {
+      "main": [
+        [
+          {
+            "node": "Wait3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs3": {
+      "main": [
+        [
+          {
+            "node": "Normalize Results4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait3": {
+      "main": [
+        [
+          {
+            "node": "Format JSON GPT3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format JSON GPT3": {
+      "main": [
+        [
+          {
+            "node": "OpenAI4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI4": {
+      "main": [
+        [
+          {
+            "node": "Notion_Resultats3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_Resultats2": {
+      "main": [
+        [
+          {
+            "node": "Set Countries KW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Countries KW": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs5": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Results5": {
+      "main": [
+        [
+          {
+            "node": "Wait4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs4": {
+      "main": [
+        [
+          {
+            "node": "Normalize Results5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait4": {
+      "main": [
+        [
+          {
+            "node": "Format JSON GPT4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format JSON GPT4": {
+      "main": [
+        [
+          {
+            "node": "OpenAI5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI5": {
+      "main": [
+        [
+          {
+            "node": "Notion_Resultats4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_Resultats3": {
+      "main": [
+        [
+          {
+            "node": "Set Countries BH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Countries BH": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs6": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Results6": {
+      "main": [
+        [
+          {
+            "node": "Wait5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Jobs5": {
+      "main": [
+        [
+          {
+            "node": "Normalize Results6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait5": {
+      "main": [
+        [
+          {
+            "node": "Format JSON GPT5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format JSON GPT5": {
+      "main": [
+        [
+          {
+            "node": "OpenAI6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI6": {
+      "main": [
+        [
+          {
+            "node": "Notion_Resultats5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion_Resultats4": {
+      "main": [
+        [
+          {
+            "node": "Set Countries OM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Countries OM": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook 1": {
+      "main": [
+        [
+          {
+            "node": "Set Countries AE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7f2cab1d-3ca5-49fb-aa92-d71ccf47f571",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "051d00ca14b98da3e619fca041f35460162de510ff29533b55273fe643f15ede"
+  },
+  "id": "7HxNLLb33mkFomLM",
+  "tags": []
+}

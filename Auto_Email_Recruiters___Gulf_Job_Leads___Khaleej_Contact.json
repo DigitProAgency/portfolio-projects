@@ -1,0 +1,332 @@
+{
+  "name": "Auto Email Recruiters – Gulf Job Leads | Khaleej Contact",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        -320
+      ],
+      "id": "12bcbb69-1ca6-4e50-a1ae-1a665e8aed17",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "215367e7-8513-80b5-89fc-d76e1301c2b7",
+          "mode": "list",
+          "cachedResultName": "Job Opportunities Khaleej Contact",
+          "cachedResultUrl": "https://www.notion.so/215367e7851380b589fcd76e1301c2b7"
+        },
+        "limit": 70,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -880,
+        60
+      ],
+      "id": "5cf828f1-1e9d-4937-932c-43be43368f98",
+      "name": "Notion",
+      "credentials": {
+        "notionApi": {
+          "id": "KfHtX4wkjCSfSQlA",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "77c884d6-f631-4e3f-98f4-fde0c302660a",
+              "leftValue": "property_email_contact",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -660,
+        60
+      ],
+      "id": "ed4be518-b4af-464f-b4e2-ea399fe5f31c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "recruitfrommorocco@gmail.com",
+        "toEmail": "recruitfrommorocco@gmail.com",
+        "subject": "Proposal for Collaboration – Recruitment Campaign Support",
+        "html": "=<p style=\"text-align: center;\">\n  <img src=\"https://i.postimg.cc/NjzBZzZy/Baniere-recruit-from-morocco-1.png\" alt=\"Recruit From Morocco\" style=\"max-width: 80%; height: auto;\">\n</p>\n\n<p>Dear Sir/Madam,</p>\n\n<p>\nWe noticed that <strong>{{ $json.property_employer_name }}</strong> is currently hiring for the position of <strong>{{ $json.property_job_positions }}</strong> in <strong>{{ $json.property_job_location }}</strong>. If you're looking for motivated and well-prepared candidates, we would be happy to collaborate with you.\n</p>\n\n<p>\nWe extend our warmest congratulations on the launch of your new recruitment campaign. On this occasion, we are pleased to offer the expertise of our group — <strong>KHALEEJ CONTACT</strong> and <strong>DUBAÏ SCHOOL</strong> — to support the success of your recruitment efforts in the Gulf region.\n</p>\n\n<p>\nOur group consists of two complementary entities:\n</p>\n\n<ol>\n  <li><strong>KHALEEJ CONTACT</strong> – A recruitment agency established in 1998, specializing in sourcing qualified and experienced candidates tailored to meet the specific needs of employers in the Gulf.</li>\n  <li><strong>DUBAÏ SCHOOL</strong> – A professional training center established in 2006, providing well-trained candidates who are ready to work and available without recruitment fee obligations on your side.</li>\n</ol>\n\n<p>\nFor more information, we invite you to visit our websites:<br>\n🌐 <a href=\"https://www.khaleejcontact.com\">www.khaleejcontact.com</a><br>\n🌐 <a href=\"https://www.dubaischool.ma\">www.dubaischool.ma</a>\n</p>\n\n<p>\nShould you wish to receive our collaboration agreement template, please feel free to contact us by email, phone, or WhatsApp using the details below:\n</p>\n\n<p>\n📧 Email: <a href=\"mailto:recruitfrommorocco@gmail.com\">recruitfrommorocco@gmail.com</a><br>\n📞 Phone: +212 5377-77788<br>\n💬 WhatsApp: +21261850549<br>\n📍 Address: Imm 39, Appt 3, Rue Jabal Tazeka, Rabat 11000 – Morocco\n</p>\n\n<p>\nWe look forward to the opportunity to collaborate with you and contribute to the success of your human resources strategy.\n</p>\n\n<p>\nWarm regards,<br>\n<strong>The Khaleej Contact Team</strong>\n</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -400,
+        40
+      ],
+      "id": "0a17235b-f913-422a-adb9-ef303ceee3b5",
+      "name": "Send Email",
+      "webhookId": "a9a93e3a-3b10-4b16-ae18-031409ac033c",
+      "alwaysOutputData": true,
+      "credentials": {
+        "smtp": {
+          "id": "iNpGzWXkm7udHxvN",
+          "name": "recruitfrommorocco@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "b1f56838-87b0-4d49-a071-6ab594abc578",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1140,
+        60
+      ],
+      "id": "8271af66-6172-47c8-bb83-fa9aeb3f1411",
+      "name": "Webhook 2",
+      "webhookId": "b1f56838-87b0-4d49-a071-6ab594abc578"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "21c367e7-8513-806a-984b-c3d4415cf057",
+          "mode": "list",
+          "cachedResultName": "Historique Offres Envoyées",
+          "cachedResultUrl": "https://www.notion.so/21c367e78513806a984bc3d4415cf057"
+        },
+        "simple": false,
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Country|title",
+              "title": "={{ $node[\"If\"].json[\"name\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Publish Date|date",
+              "date": "={{ $node[\"If\"].json[\"property_publish_date\"][\"start\"] || \"2025-01-01\" }}"
+            },
+            {
+              "key": "Employer Name|rich_text",
+              "textContent": "={{ $node[\"If\"].json[\"property_employer_name\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Source|rich_text",
+              "textContent": "={{ $node[\"If\"].json[\"property_source\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Establishment Type|select",
+              "selectValue": "={{ $node[\"If\"].json[\"property_establishment_type\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Positions|rich_text",
+              "textContent": "={{ $node[\"If\"].json[\"property_job_positions\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Job Location|rich_text",
+              "textContent": "={{ $node[\"If\"].json[\"property_job_location\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "link to apply\t|url",
+              "urlValue": "={{ $node[\"If\"].json[\"property_link_to_apply\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Employer Website|url",
+              "urlValue": "={{ $node[\"If\"].json[\"property_employer_website\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Email Contact|email",
+              "emailValue": "={{ $node[\"If\"].json[\"property_email_contact\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Other Contact Details|rich_text",
+              "textContent": "={{ $node[\"If\"].json[\"property_other_contact_details\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Remarques|rich_text",
+              "textContent": "={{ $node[\"If\"].json[\"property_remarques\"] || \"Non renseigné\" }}"
+            },
+            {
+              "key": "Original Page ID|rich_text",
+              "richText": true,
+              "text": {
+                "text": [
+                  {
+                    "text": "={{ $node[\"If\"].json.id }}",
+                    "annotationUi": {}
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        20,
+        40
+      ],
+      "id": "c31a2964-4dfc-452a-8cf0-1f3371961769",
+      "name": "Notion - Historique Offres Envoyées",
+      "credentials": {
+        "notionApi": {
+          "id": "KfHtX4wkjCSfSQlA",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "archive",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json[\"properties\"][\"Original Page ID\"][\"rich_text\"][0][\"plain_text\"] }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        40
+      ],
+      "id": "44459fb3-b3aa-4c09-bcca-4d192abc7bba",
+      "name": "Notion - Supprimer de Job Opportunities",
+      "credentials": {
+        "notionApi": {
+          "id": "KfHtX4wkjCSfSQlA",
+          "name": "n8n Job Automation"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -220,
+        40
+      ],
+      "id": "ca5c72c0-2051-40f3-944e-816433935e77",
+      "name": "Wait",
+      "webhookId": "7c0de01e-80d5-4456-ac51-2dccf13650c4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Notion": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook 2": {
+      "main": [
+        [
+          {
+            "node": "Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        []
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion - Historique Offres Envoyées": {
+      "main": [
+        [
+          {
+            "node": "Notion - Supprimer de Job Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Notion - Historique Offres Envoyées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e1f74bc7-a4f5-4320-88f0-f1daf8154fc7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "60ade44b99a4e3cd15537ba359fda17ef981832b3cb2db375fc084f042195579"
+  },
+  "id": "X85ql9oH5aFtUgsY",
+  "tags": []
+}
